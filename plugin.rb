@@ -4,6 +4,9 @@
 # authors: Aesgarth
 # url: https://github.com/Aesgarth/Discourse-Mealie
 
+enabled_site_setting :mealie_url
+enabled_site_setting :mealie_api_key
+
 after_initialize do
   Rails.logger.info "Discourse-Mealie: Plugin initializing..."
 
