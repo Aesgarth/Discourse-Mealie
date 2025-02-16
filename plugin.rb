@@ -1,4 +1,4 @@
-# name: discourse-mealie
+# name: Discourse-Mealie
 # about: A plugin to integrate Mealie recipes into Discourse posts
 # version: 0.1
 # authors: Aesgarth
