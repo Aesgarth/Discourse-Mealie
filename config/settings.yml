@@ -1,11 +1,13 @@
 plugins:
-  Discourse_Mealie:
-    mealie_url:
-      default: ""
-      type: string
-      description: "The base URL of your Mealie instance"
+  discourse_mealie_enabled:
+    default: false
 
-    mealie_api_key:
-      default: ""
-      type: string
-      description: "Your Mealie API key for authentication"
+  mealie_url:
+    default: ""
+    type: string
+    description: "The base URL of your Mealie instance"
+
+  mealie_api_key:
+    default: ""
+    type: string
+    description: "Your Mealie API key for authentication"
