@@ -4,7 +4,8 @@
 # authors: Aesgarth
 # url: https://github.com/Aesgarth/Discourse-Mealie
 
-enabled_site_setting :mealie_api_url
+enabled_site_setting :mealie_url
+enabled_site_setting :mealie_api_key
 
 after_initialize do
   module ::MealieDiscourse
@@ -15,14 +16,13 @@ after_initialize do
   end
 
   require_dependency 'topic'
-  
-  # When a new topic is created in a specific category, fetch Mealie data
+
   Topic.register_custom_field_type('mealie_recipe_id', :string)
 
   DiscourseEvent.on(:topic_created) do |topic|
-    if topic.category.name == "Recipes" # Change this to your category
+    if topic.category.name == "Recipes"
       recipe_data = fetch_mealie_recipe(topic.title)
-      
+
       if recipe_data
         topic.update(custom_fields: { "mealie_recipe_id" => recipe_data["id"] })
         topic.save_custom_fields
@@ -31,15 +31,22 @@ after_initialize do
   end
 
   def fetch_mealie_recipe(recipe_name)
-    api_url = SiteSetting.mealie_api_url
-    return nil if api_url.blank?
+    base_url = SiteSetting.mealie_url
+    api_key = SiteSetting.mealie_api_key
 
-    response = Excon.get("#{api_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
-                         headers: { "Accept" => "application/json" })
+    return nil if base_url.blank? || api_key.blank?
+
+    response = Excon.get(
+      "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
+      headers: {
+        "Accept" => "application/json",
+        "Authorization" => "Bearer #{api_key}"
+      }
+    )
 
     return nil unless response.status == 200
 
     recipes = JSON.parse(response.body)
-    recipes.first # Return the first matching recipe
+    recipes.first
   end
 end
