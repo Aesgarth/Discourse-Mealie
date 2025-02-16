@@ -1,0 +1,3 @@
+mealie_api_url:
+  default: ""
+  description: "The base URL of your Mealie API instance"
