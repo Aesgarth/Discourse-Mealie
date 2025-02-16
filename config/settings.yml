@@ -1,8 +1,9 @@
 mealie_url:
   default: ""
-  description: "The base URL of your Mealie instance (e.g., https://mealie.example.com)"
+  type: string
+  description: "The base URL of your Mealie instance"
 
 mealie_api_key:
   default: ""
-  type: secret
-  description: "API Key for accessing Mealie's API"
+  type: string
+  description: "Your Mealie API key for authentication"
