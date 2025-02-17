@@ -20,22 +20,36 @@ after_initialize do
 
         return nil if base_url.blank? || api_key.blank?
 
-        response = Excon.get(
-          "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
-          headers: {
-            "Accept" => "application/json",
-            "Authorization" => "Bearer #{api_key}"
-          }
-        )
+        response = nil
+        begin
+          response = Excon.get(
+            "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
+            headers: {
+              "Accept" => "application/json",
+              "Authorization" => "Bearer #{api_key}"
+            }
+          )
+        rescue Excon::Error => e
+          Rails.logger.error("Mealie API request failed: #{e.message}")
+          return nil
+        end
+
+        Rails.logger.info("Mealie API Response Code: #{response.status}")
+        Rails.logger.info("Mealie API Response Body: #{response.body}")
 
         return nil unless response.status == 200
 
-        recipes = JSON.parse(response.body)
+        begin
+          recipes = JSON.parse(response.body)
+        rescue JSON::ParserError => e
+          Rails.logger.error("Failed to parse Mealie API response: #{e.message}")
+          Rails.logger.error("Response body: #{response.body}")
+          return nil
+        end
+
         return nil if recipes.empty? || !recipes.is_a?(Array)
 
         recipes.first
-      rescue JSON::ParserError
-        nil
       end
     end
   end
