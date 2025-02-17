@@ -12,40 +12,58 @@ after_initialize do
       engine_name "mealie_discourse"
       isolate_namespace MealieDiscourse
     end
+
+    class << self
+      def fetch_mealie_recipe(recipe_name)
+        base_url = SiteSetting.mealie_url
+        api_key = SiteSetting.mealie_api_key
+
+        return nil if base_url.blank? || api_key.blank?
+
+        response = Excon.get(
+          "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
+          headers: {
+            "Accept" => "application/json",
+            "Authorization" => "Bearer #{api_key}"
+          }
+        )
+
+        return nil unless response.status == 200
+
+        recipes = JSON.parse(response.body)
+        return nil if recipes.empty? || !recipes.is_a?(Array)
+
+        recipes.first
+      rescue JSON::ParserError
+        nil
+      end
+    end
   end
 
   require_dependency 'topic'
 
+  # Register custom field for storing Mealie recipe IDs
   Topic.register_custom_field_type('mealie_recipe_id', :string)
 
+  # Automatically associate a topic with a Mealie recipe when created
   DiscourseEvent.on(:topic_created) do |topic|
     if SiteSetting.discourse_mealie_enabled && topic.category.name == "Recipes"
-      recipe_data = fetch_mealie_recipe(topic.title)
+      recipe_data = MealieDiscourse.fetch_mealie_recipe(topic.title)
 
       if recipe_data
-        topic.update(custom_fields: { "mealie_recipe_id" => recipe_data["id"] })
+        topic.custom_fields["mealie_recipe_id"] = recipe_data["id"]
         topic.save_custom_fields
       end
     end
   end
 
-  def fetch_mealie_recipe(recipe_name)
-    base_url = SiteSetting.mealie_url
-    api_key = SiteSetting.mealie_api_key
+  # Define routes for webhook listener and test connection
+  MealieDiscourse::Engine.routes.draw do
+    post "/webhook" => "mealie#webhook"
+    post "/test_connection" => "mealie#test_connection"
+  end
 
-    return nil if base_url.blank? || api_key.blank?
-
-    response = Excon.get(
-      "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
-      headers: {
-        "Accept" => "application/json",
-        "Authorization" => "Bearer #{api_key}"
-      }
-    )
-
-    return nil unless response.status == 200
-
-    recipes = JSON.parse(response.body)
-    recipes.first
+  Discourse::Application.routes.append do
+    mount ::MealieDiscourse::Engine, at: "/mealie"
   end
 end

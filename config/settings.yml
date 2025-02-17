@@ -11,3 +11,9 @@ plugins:
     default: ""
     type: string
     description: "Your Mealie API key for authentication"
+    
+  test_mealie_connection:
+    type: button
+    label: "Test Connection"
+    description: "Click to test connection to the Mealie API."
+    action: "mealie.test_connection"

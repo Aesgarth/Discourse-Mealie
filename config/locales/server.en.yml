@@ -3,3 +3,4 @@ en:
     discourse_mealie_enabled: "Enable Discourse Mealie Plugin"
     mealie_url: "Mealie Base URL"
     mealie_api_key: "Mealie API Key"
+    test_mealie_connection: "Test Connection"
