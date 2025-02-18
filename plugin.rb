@@ -20,10 +20,15 @@ after_initialize do
 
         return nil if base_url.blank? || api_key.blank?
 
+        # Correct search query format
+        search_url = "#{base_url}/api/recipes?queryFilter=#{CGI.escape(recipe_name)}"
+
+        Rails.logger.info("Mealie API Request URL: #{search_url}")
+
         response = nil
         begin
           response = Excon.get(
-            "#{base_url}/api/recipes?search=#{CGI.escape(recipe_name)}",
+            search_url,
             headers: {
               "Accept" => "application/json",
               "Authorization" => "Bearer #{api_key}"
@@ -40,16 +45,48 @@ after_initialize do
         return nil unless response.status == 200
 
         begin
-          recipes = JSON.parse(response.body)
+          response_json = JSON.parse(response.body)
         rescue JSON::ParserError => e
           Rails.logger.error("Failed to parse Mealie API response: #{e.message}")
           Rails.logger.error("Response body: #{response.body}")
           return nil
         end
 
-        return nil if recipes.empty? || !recipes.is_a?(Array)
+        return nil unless response_json["items"].is_a?(Array) && !response_json["items"].empty?
 
-        recipes.first
+        first_recipe = response_json["items"].first
+        recipe_slug = first_recipe["slug"]
+
+        # If we got a valid slug, fetch the full recipe details
+        return nil if recipe_slug.blank?
+
+        recipe_url = "#{base_url}/api/recipes/#{recipe_slug}"
+        Rails.logger.info("Fetching full recipe details from: #{recipe_url}")
+
+        begin
+          recipe_response = Excon.get(
+            recipe_url,
+            headers: {
+              "Accept" => "application/json",
+              "Authorization" => "Bearer #{api_key}"
+            }
+          )
+        rescue Excon::Error => e
+          Rails.logger.error("Failed to fetch full recipe details: #{e.message}")
+          return nil
+        end
+
+        return nil unless recipe_response.status == 200
+
+        begin
+          full_recipe = JSON.parse(recipe_response.body)
+        rescue JSON::ParserError => e
+          Rails.logger.error("Failed to parse full recipe response: #{e.message}")
+          Rails.logger.error("Response body: #{recipe_response.body}")
+          return nil
+        end
+
+        full_recipe
       end
     end
   end
