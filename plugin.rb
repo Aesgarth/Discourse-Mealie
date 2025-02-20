@@ -18,12 +18,29 @@ after_initialize do
         base_url = SiteSetting.mealie_url
         api_key = SiteSetting.mealie_api_key
 
-        return nil if base_url.blank? || api_key.blank?
+        if base_url.blank?
+          Rails.logger.error("Mealie API: base_url is missing!")
+          return nil
+        end
+
+        if api_key.blank?
+          Rails.logger.error("Mealie API: API key is missing!")
+          return nil
+        end
+
+        # Ensure base_url has https://
+        unless base_url.start_with?("http://", "https://")
+          base_url = "https://#{base_url}"
+        end
 
         # Correct search query format
         search_url = "#{base_url}/api/recipes?queryFilter=#{CGI.escape(recipe_name)}"
 
         Rails.logger.info("Mealie API Request URL: #{search_url}")
+        Rails.logger.info("Mealie API Headers: #{{
+          "Accept" => "application/json",
+          "Authorization" => "Bearer #{api_key}"
+        }}")
 
         response = nil
         begin
@@ -40,7 +57,18 @@ after_initialize do
         end
 
         Rails.logger.info("Mealie API Response Code: #{response.status}")
+        Rails.logger.info("Mealie API Response Headers: #{response.headers}")
         Rails.logger.info("Mealie API Response Body: #{response.body}")
+
+        if response.status == 401
+          Rails.logger.error("Mealie API: Unauthorized! Check API key.")
+          return nil
+        end
+
+        if response.status == 302
+          Rails.logger.error("Mealie API: Redirect detected! Are we hitting a login page?")
+          return nil
+        end
 
         return nil unless response.status == 200
 
@@ -57,7 +85,6 @@ after_initialize do
         first_recipe = response_json["items"].first
         recipe_slug = first_recipe["slug"]
 
-        # If we got a valid slug, fetch the full recipe details
         return nil if recipe_slug.blank?
 
         recipe_url = "#{base_url}/api/recipes/#{recipe_slug}"
