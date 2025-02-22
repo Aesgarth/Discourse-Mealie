@@ -5,6 +5,8 @@
 # url: https://github.com/Aesgarth/Discourse-Mealie
 
 enabled_site_setting :discourse_mealie_enabled
+require_relative "app/controllers/mealie_controller"
+
 
 after_initialize do
   module ::MealieDiscourse
