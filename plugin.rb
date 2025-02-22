@@ -6,9 +6,7 @@
 
 enabled_site_setting :discourse_mealie_enabled
 
-require_dependency "application_controller"
 require_relative "app/controllers/mealie_controller"
-require_dependency "application_controller"
 require_relative "app/controllers/admin_mealie_controller"
 
 after_initialize do
