@@ -28,19 +28,12 @@ after_initialize do
           return nil
         end
 
-        # Ensure base_url has https://
         unless base_url.start_with?("http://", "https://")
           base_url = "https://#{base_url}"
         end
 
-        # Correct search query format
         search_url = "#{base_url}/api/recipes?queryFilter=#{CGI.escape(recipe_name)}"
-
         Rails.logger.info("Mealie API Request URL: #{search_url}")
-        Rails.logger.info("Mealie API Headers: #{{
-          "Accept" => "application/json",
-          "Authorization" => "Bearer #{api_key}"
-        }}")
 
         response = nil
         begin
@@ -80,7 +73,10 @@ after_initialize do
           return nil
         end
 
-        return nil unless response_json["items"].is_a?(Array) && !response_json["items"].empty?
+        unless response_json["items"].is_a?(Array) && !response_json["items"].empty?
+          Rails.logger.error("Mealie API: No valid items returned in response.")
+          return nil
+        end
 
         first_recipe = response_json["items"].first
         recipe_slug = first_recipe["slug"]
@@ -120,25 +116,28 @@ after_initialize do
 
   require_dependency 'topic'
 
-  # Register custom field for storing Mealie recipe IDs
   Topic.register_custom_field_type('mealie_recipe_id', :string)
 
-  # Automatically associate a topic with a Mealie recipe when created
   DiscourseEvent.on(:topic_created) do |topic|
+    Rails.logger.info("Topic Created Event Triggered for: #{topic.title}")
     if SiteSetting.discourse_mealie_enabled && topic.category.name == "Recipes"
+      Rails.logger.info("Fetching recipe for topic: #{topic.title}")
       recipe_data = MealieDiscourse.fetch_mealie_recipe(topic.title)
 
       if recipe_data
+        Rails.logger.info("Recipe found: #{recipe_data["id"]}")
         topic.custom_fields["mealie_recipe_id"] = recipe_data["id"]
         topic.save_custom_fields
+      else
+        Rails.logger.error("No recipe found for topic: #{topic.title}")
       end
     end
   end
 
-  # Define routes for webhook listener and test connection
   MealieDiscourse::Engine.routes.draw do
     post "/webhook" => "mealie#webhook"
     post "/test_connection" => "mealie#test_connection"
+    get "/test_fetch_recipe" => "mealie#test_fetch_recipe"
   end
 
   Discourse::Application.routes.append do
