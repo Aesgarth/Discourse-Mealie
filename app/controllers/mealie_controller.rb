@@ -1,9 +1,8 @@
 module MealieDiscourse
-  class MealieController < ::Admin::AdminController
+  class MealieController < ::ApplicationController
     requires_plugin 'discourse_mealie'
 
     skip_before_action :check_xhr
-    before_action :ensure_logged_in, except: [:webhook]
     before_action :verify_mealie_request, only: [:webhook]
 
     # Webhook listener for Mealie notifications
@@ -24,25 +23,17 @@ module MealieDiscourse
       render json: { status: "success" }
     end
 
-    # Test connection to Mealie API
-    def test_connection
-      base_url = SiteSetting.mealie_url
-      api_key = SiteSetting.mealie_api_key
+    # Public test fetch recipe endpoint
+    def test_fetch_recipe
+      recipe_name = params[:recipe] || "Test Recipe"
+      Rails.logger.info("Manual API Test: Fetching #{recipe_name}")
 
-      if base_url.blank? || api_key.blank?
-        render_json_error("Mealie URL or API key is missing.")
-        return
-      end
+      recipe_data = MealieDiscourse.fetch_mealie_recipe(recipe_name)
 
-      response = Excon.get(
-        "#{base_url}/api/recipes",
-        headers: { "Authorization" => "Bearer #{api_key}" }
-      )
-
-      if response.status == 200
-        render json: success_json.merge(message: "Connection successful!")
+      if recipe_data
+        render json: { success: true, data: recipe_data }
       else
-        render_json_error("Failed to connect: HTTP #{response.status}")
+        render json: { success: false, error: "Recipe not found or API failed" }, status: 400
       end
     end
 
