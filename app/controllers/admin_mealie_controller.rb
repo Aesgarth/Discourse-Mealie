@@ -1,3 +1,5 @@
+require_dependency "application_controller"
+
 module MealieDiscourse
   class AdminMealieController < ::Admin::AdminController
     requires_plugin 'discourse_mealie'
