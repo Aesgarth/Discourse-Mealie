@@ -5,8 +5,9 @@
 # url: https://github.com/Aesgarth/Discourse-Mealie
 
 enabled_site_setting :discourse_mealie_enabled
-require_relative "app/controllers/mealie_controller"
 
+require_relative "app/controllers/mealie_controller"
+require_relative "app/controllers/admin_mealie_controller"
 
 after_initialize do
   module ::MealieDiscourse
@@ -54,16 +55,6 @@ after_initialize do
         Rails.logger.info("Mealie API Response Code: #{response.status}")
         Rails.logger.info("Mealie API Response Headers: #{response.headers}")
         Rails.logger.info("Mealie API Response Body: #{response.body}")
-
-        if response.status == 401
-          Rails.logger.error("Mealie API: Unauthorized! Check API key.")
-          return nil
-        end
-
-        if response.status == 302
-          Rails.logger.error("Mealie API: Redirect detected! Are we hitting a login page?")
-          return nil
-        end
 
         return nil unless response.status == 200
 
@@ -138,8 +129,10 @@ after_initialize do
 
   MealieDiscourse::Engine.routes.draw do
     post "/webhook" => "mealie#webhook"
-    post "/test_connection" => "mealie#test_connection"
     get "/test_fetch_recipe" => "mealie#test_fetch_recipe"
+    namespace :admin do
+      post "/test_connection" => "admin_mealie#test_connection"
+    end
   end
 
   Discourse::Application.routes.append do
