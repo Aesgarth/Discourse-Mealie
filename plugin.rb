@@ -1,4 +1,4 @@
-# name: discourse-mealie
+# name: Discourse-Mealie
 # about: Integrates Mealie recipe manager with Discourse forums
 # version: 0.1
 # authors: Aesgarth
