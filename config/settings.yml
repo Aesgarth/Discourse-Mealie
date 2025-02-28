@@ -1,4 +1,3 @@
-# config/settings.yml
 plugins:
   mealie_integration_enabled:
     default: false

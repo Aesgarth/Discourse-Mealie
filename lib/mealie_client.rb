@@ -1,4 +1,5 @@
-# lib/mealie_client.rb
+# frozen_string_literal: true
+
 module MealieIntegration
   class MealieClient
     def initialize
@@ -15,6 +16,15 @@ module MealieIntegration
     
     def list_recipes(page = 1, per_page = 10)
       response = get("/recipes?page=#{page}&per_page=#{per_page}")
+      return [] unless response.success?
+      
+      JSON.parse(response.body)
+    end
+    
+    def list_recipes_since(timestamp)
+      # This method assumes Mealie API supports filtering by creation/update time
+      # Adjust the API endpoint based on Mealie's actual API
+      response = get("/recipes?created_after=#{timestamp}")
       return [] unless response.success?
       
       JSON.parse(response.body)

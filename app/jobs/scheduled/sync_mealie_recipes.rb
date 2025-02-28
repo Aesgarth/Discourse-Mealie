@@ -1,4 +1,5 @@
-# app/jobs/scheduled/sync_mealie_recipes.rb
+# frozen_string_literal: true
+
 module Jobs
   class SyncMealieRecipes < ::Jobs::Scheduled
     every 1.hour
