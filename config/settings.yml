@@ -19,7 +19,7 @@ plugins:
   mealie_sync_frequency:
     default: 0
     client: false
-    enum: "SiteSetting.mealie_sync_frequency"
+    enum: "MealieIntegration::SYNC_FREQUENCIES"
   mealie_last_sync:
     default: ""
     client: false

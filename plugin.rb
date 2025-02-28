@@ -15,9 +15,9 @@ after_initialize do
   load File.expand_path('../app/jobs/scheduled/sync_mealie_recipes.rb', __FILE__)
   load File.expand_path('../app/jobs/regular/import_recipe.rb', __FILE__)
   
-  # Add our admin settings
-  SiteSetting.class_eval do
-    enum mealie_sync_frequency: {
+  # Define the sync frequency enum before site settings are loaded
+  module ::MealieIntegration
+    SYNC_FREQUENCIES = {
       never: 0,
       hourly: 1,
       daily: 2
