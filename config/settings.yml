@@ -2,23 +2,29 @@ plugins:
   mealie_integration_enabled:
     default: false
     client: true
+    description: "Enable integration with Mealie recipe manager"
   mealie_url:
     default: ""
     client: false
+    description: "The URL of your Mealie instance (e.g. https://mealie.yourdomain.com)"
   mealie_api_key:
     default: ""
     client: false
     secret: true
+    description: "API key for accessing your Mealie instance"
   mealie_default_category_id:
     default: 0
     client: false
+    description: "The category ID where recipes will be posted"
   mealie_tag:
     default: "recipe"
     client: false
+    description: "Tag to apply to imported recipes"
   mealie_sync_frequency:
     default: 0
     client: false
     enum: "MealieIntegration::SYNC_FREQUENCIES"
+    description: "How often to synchronize with Mealie"
   mealie_last_sync:
     default: ""
     client: false
