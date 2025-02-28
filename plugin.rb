@@ -1,4 +1,4 @@
-# name: Discourse-Mealie
+# name: discourse-mealie
 # about: Integrates Mealie recipe manager with Discourse forums
 # version: 0.1
 # authors: Aesgarth
@@ -8,21 +8,21 @@ enabled_site_setting :mealie_integration_enabled
 
 register_asset 'stylesheets/mealie-integration.scss'
 
+# Define the module and constants outside after_initialize
+module ::MealieIntegration
+  SYNC_FREQUENCIES = {
+    never: 0,
+    hourly: 1,
+    daily: 2
+  }
+end
+
 after_initialize do
   # Load our dependencies
   load File.expand_path('../lib/mealie_client.rb', __FILE__)
   load File.expand_path('../app/controllers/mealie_controller.rb', __FILE__)
   load File.expand_path('../app/jobs/scheduled/sync_mealie_recipes.rb', __FILE__)
   load File.expand_path('../app/jobs/regular/import_recipe.rb', __FILE__)
-  
-  # Define the sync frequency enum before site settings are loaded
-  module ::MealieIntegration
-    SYNC_FREQUENCIES = {
-      never: 0,
-      hourly: 1,
-      daily: 2
-    }
-  end
   
   # Add our API endpoints
   Discourse::Application.routes.append do
@@ -44,7 +44,7 @@ after_initialize do
   
   # Define controller
   class ::MealieIntegration::MealieController < ::ApplicationController
-    requires_plugin 'discourse-mealie-integration'
+    requires_plugin 'discourse-mealie'
     skip_before_action :verify_authenticity_token, only: [:webhook]
     
     def index
