@@ -1,141 +1,96 @@
 # name: Discourse-Mealie
-# about: A plugin to integrate Mealie recipes into Discourse posts
+# about: Integrates Mealie recipe manager with Discourse forums
 # version: 0.1
 # authors: Aesgarth
 # url: https://github.com/Aesgarth/Discourse-Mealie
 
-enabled_site_setting :discourse_mealie_enabled
+enabled_site_setting :mealie_integration_enabled
 
-#require_relative "app/controllers/mealie_controller"
-#require_relative "app/controllers/admin_mealie_controller"
+register_asset 'stylesheets/mealie-integration.scss'
 
 after_initialize do
-  module ::MealieDiscourse
-    class Engine < ::Rails::Engine
-      engine_name "mealie_discourse"
-      isolate_namespace MealieDiscourse
-    end
-
-    class << self
-      def fetch_mealie_recipe(recipe_name)
-        base_url = SiteSetting.mealie_url
-        api_key = SiteSetting.mealie_api_key
-
-        if base_url.blank?
-          Rails.logger.error("Mealie API: base_url is missing!")
-          return nil
-        end
-
-        if api_key.blank?
-          Rails.logger.error("Mealie API: API key is missing!")
-          return nil
-        end
-
-        unless base_url.start_with?("http://", "https://")
-          base_url = "https://#{base_url}"
-        end
-
-        search_url = "#{base_url}/api/recipes?queryFilter=#{CGI.escape(recipe_name)}"
-        Rails.logger.info("Mealie API Request URL: #{search_url}")
-
-        response = nil
-        begin
-          response = Excon.get(
-            search_url,
-            headers: {
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{api_key}"
-            }
-          )
-        rescue Excon::Error => e
-          Rails.logger.error("Mealie API request failed: #{e.message}")
-          return nil
-        end
-
-        Rails.logger.info("Mealie API Response Code: #{response.status}")
-        Rails.logger.info("Mealie API Response Headers: #{response.headers}")
-        Rails.logger.info("Mealie API Response Body: #{response.body}")
-
-        return nil unless response.status == 200
-
-        begin
-          response_json = JSON.parse(response.body)
-        rescue JSON::ParserError => e
-          Rails.logger.error("Failed to parse Mealie API response: #{e.message}")
-          Rails.logger.error("Response body: #{response.body}")
-          return nil
-        end
-
-        unless response_json["items"].is_a?(Array) && !response_json["items"].empty?
-          Rails.logger.error("Mealie API: No valid items returned in response.")
-          return nil
-        end
-
-        first_recipe = response_json["items"].first
-        recipe_slug = first_recipe["slug"]
-
-        return nil if recipe_slug.blank?
-
-        recipe_url = "#{base_url}/api/recipes/#{recipe_slug}"
-        Rails.logger.info("Fetching full recipe details from: #{recipe_url}")
-
-        begin
-          recipe_response = Excon.get(
-            recipe_url,
-            headers: {
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{api_key}"
-            }
-          )
-        rescue Excon::Error => e
-          Rails.logger.error("Failed to fetch full recipe details: #{e.message}")
-          return nil
-        end
-
-        return nil unless recipe_response.status == 200
-
-        begin
-          full_recipe = JSON.parse(recipe_response.body)
-        rescue JSON::ParserError => e
-          Rails.logger.error("Failed to parse full recipe response: #{e.message}")
-          Rails.logger.error("Response body: #{recipe_response.body}")
-          return nil
-        end
-
-        full_recipe
-      end
-    end
+  # Load our dependencies
+  load File.expand_path('../lib/mealie_client.rb', __FILE__)
+  load File.expand_path('../app/controllers/mealie_controller.rb', __FILE__)
+  load File.expand_path('../app/jobs/scheduled/sync_mealie_recipes.rb', __FILE__)
+  load File.expand_path('../app/jobs/regular/import_recipe.rb', __FILE__)
+  
+  # Add our admin settings
+  SiteSetting.class_eval do
+    enum mealie_sync_frequency: {
+      never: 0,
+      hourly: 1,
+      daily: 2
+    }
   end
-
-  require_dependency 'topic'
-
-  Topic.register_custom_field_type('mealie_recipe_id', :string)
-
-  DiscourseEvent.on(:topic_created) do |topic|
-    Rails.logger.info("Topic Created Event Triggered for: #{topic.title}")
-    if SiteSetting.discourse_mealie_enabled && topic.category.name == "Recipes"
-      Rails.logger.info("Fetching recipe for topic: #{topic.title}")
-      recipe_data = MealieDiscourse.fetch_mealie_recipe(topic.title)
-
-      if recipe_data
-        Rails.logger.info("Recipe found: #{recipe_data["id"]}")
-        topic.custom_fields["mealie_recipe_id"] = recipe_data["id"]
-        topic.save_custom_fields
-      else
-        Rails.logger.error("No recipe found for topic: #{topic.title}")
-      end
-    end
-  end
-
-  MealieDiscourse::Engine.routes.draw do
-    post "/webhook" => "mealie#webhook"
-    get "/test_fetch_recipe" => "mealie#test_fetch_recipe"
-    namespace :admin do
-      post "/test_connection" => "admin_mealie#test_connection"
-    end
-  end
-
+  
+  # Add our API endpoints
   Discourse::Application.routes.append do
-    mount ::MealieDiscourse::Engine, at: "/mealie"
+    mount ::MealieIntegration::Engine, at: "/mealie"
+  end
+  
+  module ::MealieIntegration
+    class Engine < ::Rails::Engine
+      engine_name "mealie_integration"
+      isolate_namespace MealieIntegration
+      
+      routes do
+        get "/" => "mealie#index"
+        post "/webhook" => "mealie#webhook"
+        post "/import" => "mealie#import"
+      end
+    end
+  end
+  
+  # Define controller
+  class ::MealieIntegration::MealieController < ::ApplicationController
+    requires_plugin 'discourse-mealie-integration'
+    skip_before_action :verify_authenticity_token, only: [:webhook]
+    
+    def index
+      render json: { status: 'ok' }
+    end
+    
+    def webhook
+      # Here we'll handle webhooks from Mealie when new recipes are created
+      if SiteSetting.mealie_integration_enabled
+        if verify_mealie_webhook(request)
+          recipe_id = params[:recipe_id]
+          Jobs.enqueue(:import_recipe, recipe_id: recipe_id)
+          render json: { success: true, message: "Recipe import job enqueued" }
+        else
+          render json: { success: false, message: "Invalid webhook signature" }, status: 403
+        end
+      else
+        render json: { success: false, message: "Plugin not enabled" }, status: 404
+      end
+    end
+    
+    def import
+      # Manual import endpoint for admins
+      if current_user&.admin?
+        recipe_url = params[:recipe_url]
+        recipe_id = extract_recipe_id(recipe_url)
+        Jobs.enqueue(:import_recipe, recipe_id: recipe_id)
+        render json: { success: true, message: "Recipe import job enqueued" }
+      else
+        render json: { success: false, message: "Admin access required" }, status: 403
+      end
+    end
+    
+    private
+    
+    def verify_mealie_webhook(request)
+      # Implement webhook verification if Mealie supports it
+      # For now, we'll just verify the API key
+      api_key = request.headers['X-Mealie-Api-Key']
+      api_key == SiteSetting.mealie_api_key
+    end
+    
+    def extract_recipe_id(url)
+      # Extract recipe ID from a Mealie URL
+      # Example implementation, adjust as needed based on Mealie's URL structure
+      url.split('/').last
+    end
   end
 end

@@ -1,20 +1,26 @@
+# config/settings.yml
 plugins:
-  discourse_mealie_enabled:
+  mealie_integration_enabled:
     default: false
-
+    client: true
   mealie_url:
     default: ""
-    type: string
-    description: "The base URL of your Mealie instance"
-
+    client: false
   mealie_api_key:
     default: ""
-    type: string
-    description: "Your Mealie API key for authentication"
-
-  test_mealie_connection:
-    type: button
-    label: "Test Connection"
-    description: "Click to test connection to the Mealie API."
-    action: "mealie.test_connection"
-    default: false
+    client: false
+    secret: true
+  mealie_default_category_id:
+    default: 0
+    client: false
+  mealie_tag:
+    default: "recipe"
+    client: false
+  mealie_sync_frequency:
+    default: 0
+    client: false
+    enum: "SiteSetting.mealie_sync_frequency"
+  mealie_last_sync:
+    default: ""
+    client: false
+    hidden: true

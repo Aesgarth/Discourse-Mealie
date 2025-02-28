@@ -1,0 +1,47 @@
+/* assets/stylesheets/mealie-integration.scss */
+.mealie-admin {
+    .import-result {
+      margin-left: 10px;
+      color: var(--success);
+    }
+    
+    .mealie-import-form {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: var(--secondary-very-low);
+      border-radius: 4px;
+    }
+  }
+  
+  .mealie-recipe {
+    .recipe-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      
+      .recipe-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-right: 15px;
+      }
+      
+      .recipe-meta {
+        flex: 1;
+      }
+    }
+    
+    .recipe-ingredients {
+      background: var(--primary-very-low);
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .recipe-instructions {
+      ol {
+        padding-left: 20px;
+      }
+    }
+  }

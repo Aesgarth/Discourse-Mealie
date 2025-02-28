@@ -1,0 +1,9 @@
+# config/locales/client.en.yml
+en:
+  js:
+    mealie_integration:
+      title: "Mealie Integration"
+      description: "Integrate your Discourse forum with Mealie recipe manager"
+      import_recipe: "Import Recipe"
+      recipe_url: "Mealie Recipe URL"
+      import: "Import Now"
