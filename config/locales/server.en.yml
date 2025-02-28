@@ -1,0 +1,8 @@
+en:
+  site_settings:
+    mealie_integration_enabled: "Enable Mealie Integration"
+    mealie_url: "Mealie Base URL"
+    mealie_api_key: "Mealie API Key"
+    mealie_default_category_id: "Default Category for Recipes"
+    mealie_tag: "Tag for Recipes"
+    mealie_sync_frequency: "Synchronization Frequency"
